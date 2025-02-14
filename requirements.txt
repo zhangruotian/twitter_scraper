@@ -1,0 +1,5 @@
+twikit==2.3.3
+python-dotenv==1.0.0
+numpy==1.24.3
+pandas==2.0.3
+tqdm==4.66.1 
