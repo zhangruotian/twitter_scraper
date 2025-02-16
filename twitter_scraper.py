@@ -98,6 +98,10 @@ class TwitterScraper:
                 "retweet_count",
                 "like_count",
                 "reply_count",
+                "media_urls",  # List of media URLs (images, videos)
+                "urls",  # List of URLs mentioned in tweet
+                "has_media",  # Boolean indicating if tweet has media
+                "media_types",  # List of media types (photo, video, etc.)
             ]
         )
         # Save empty DataFrame to create file with headers
@@ -128,6 +132,40 @@ class TwitterScraper:
             while result and total_tweets < max_tweets:
                 # Process current batch of tweets
                 for tweet in result:
+                    # Extract media information
+                    media_urls = []
+                    media_types = []
+                    has_media = False
+
+                    # Check media attribute directly
+                    if hasattr(tweet, "media"):
+                        for media in tweet.media:
+                            media_type = getattr(media, "type", "")
+                            media_types.append(media_type)
+                            has_media = True
+
+                            # Handle different media types
+                            if media_type == "photo":
+                                # Get the photo URL
+                                media_url = getattr(media, "media_url", "None")
+                                if media_url:
+                                    media_urls.append(
+                                        f"{media_url}?format=jpg&name=large"
+                                    )
+                            elif media_type in ["video", "animated_gif"]:
+                                # For videos and GIFs, get the stream
+                                if hasattr(media, "streams"):
+                                    # Get the last stream (usually highest quality)
+                                    media_urls.append(media.streams[-1].url) # type:ignore
+
+                    # Extract URLs from tweet
+                    urls = []
+                    if hasattr(tweet, "urls"):
+                        for url_entity in tweet.urls:
+                            expanded_url = getattr(url_entity, "expanded_url", "")
+                            if expanded_url:
+                                urls.append(expanded_url)
+
                     tweet_data = {
                         "id": tweet.id,
                         "text": tweet.text,
@@ -137,6 +175,10 @@ class TwitterScraper:
                         "retweet_count": tweet.retweet_count,
                         "like_count": tweet.favorite_count,
                         "reply_count": tweet.reply_count,
+                        "media_urls": "|".join(media_urls) if media_urls else "",
+                        "urls": "|".join(urls) if urls else "",
+                        "has_media": has_media,
+                        "media_types": "|".join(media_types) if media_types else "",
                     }
                     tweets_batch.append(tweet_data)
                     total_tweets += 1
